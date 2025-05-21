@@ -1,6 +1,22 @@
 from typing import Any, Optional, Iterator
 
 
+class DoubleLinkedListIteraot:
+    def __init__(self, first_node) -> None:
+        self.current = first_node
+    
+    def __iter__(self) -> Iterator:
+        return self
+    
+    def __next__(self):
+        if not self.current:
+            raise StopIteration
+        
+        value = self.current
+        self.current = self.current.next
+        return value
+
+
 class DoubleLinkedList:
     """Двусвязный список"""
     class Node:
@@ -12,14 +28,10 @@ class DoubleLinkedList:
 
     def __init__(self) -> None:
         self._head = None
-        self._counter = 0
+        self._size = 0
 
-    def _create_node(self, value: Any) -> Optional[Node]:
-        node = self.Node(value)
-        if self._head is None:
-            self._head = node
-            return
-        return node
+    def _create_node(self, value: Any) -> Node:
+        return self.Node(value)
 
     def _get_first_or_last_node(self, is_first: bool = True) -> Optional[Node]:
         """Получение первого или последнего элемента"""
@@ -43,27 +55,35 @@ class DoubleLinkedList:
     def append(self, value: Any) -> None:
         """Добавление элемента в конец списка"""
         node = self._create_node(value)
-        if not node:
+        if self._size == 0:
+            self._head = node
+            self._size += 1
             return
         
         last_node = self._get_last_node()
         node.prev = last_node
         last_node.next = node
+        self._size += 1
     
     def prepend(self, value: Any) -> None:
         """Добавление элемента в начало списка"""
         node = self._create_node(value)
-        if not node:
+        if self._size == 0:
+            self._head = node
+            self._size += 1
             return
         
         first_node = self._get_first_node()
         node.next = first_node
         first_node.prev = node
+        self._size += 1
     
     def insert(self, index: int, value: Any) -> None:
         """Добавление элемента по индексу"""
         node = self._create_node(value)
-        if not node:
+        if self._size == 0:
+            self._head = node
+            self._size += 1
             return
         
         if index < 0:
@@ -89,13 +109,14 @@ class DoubleLinkedList:
         else:
             node.prev = prev_
             prev_.next = node
+        self._size += 1
         
     def delete(self, value: Any) -> None:
         """Удаление элемента по значению"""
-        current = self._get_first_node()
-        if not current:
+        if self._size == 0:
             return
-
+        
+        current = self._get_first_node()
         while current:
             if current.value != value:
                 current = current.next
@@ -111,15 +132,17 @@ class DoubleLinkedList:
                 current.next.prev = current.prev
             
             break
+        self._size -= 1
     
     def find(self, value: Any) -> int:
         """
         Поиск элемента по значению. Возвращает индекс
         """
+        if self._size == 0:
+            return -1
+        
         index = 0
         current = self._get_first_node()
-        if not current:
-            return -1
 
         while current:
             if current.value != value:
@@ -132,42 +155,20 @@ class DoubleLinkedList:
     
     def __len__(self) -> int:
         """Возвращает длину списка"""
-        len_ = 0
-        current = self._get_first_node()
-        if not current:
-            return len_
-        
-        while current:
-            len_ += 1
-            current = current.next
-        return len_
+        return self._size
     
     def __iter__(self) -> Iterator:
         """Возвращает итератор"""
-        self._counter = 0
-        return self
-    
-    def __next__(self):
-        """Возвращает следующий элемент"""
-        index = 0
-        value = self._get_first_node()
-        
-        while index < self._counter and value:
-            index += 1
-            value = value.next
-        
-        if value:
-            self._counter += 1
-            return value
-        
-        raise StopIteration
+        return DoubleLinkedListIteraot(self._get_first_node())
+
 
 
 if __name__ == "__main__":
     double_ll = DoubleLinkedList()
     double_ll.append(10)
+    double_ll.append(20)
     double_ll.prepend(0)
-    double_ll.insert(-2, -10)
+    double_ll.insert(-3, -10)
     double_ll.delete(10)
     print("index:", double_ll.find(-10))
     print("len:", len(double_ll))
