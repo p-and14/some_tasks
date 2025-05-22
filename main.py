@@ -33,6 +33,9 @@ class MyDict:
         self.__indexes = [[-1] for _ in range(self.__size)]
         self.__load_factor = 0.0
 
+    def __get_index(self, key: Hashable) -> int:
+        return abs(hash(key)) % self.__size
+
     def __set_load_factor(self) -> None:
         self.__load_factor = len(self.__data) / self.__size
 
@@ -59,7 +62,7 @@ class MyDict:
         return self.Entrie(key, value)
     
     def __setitem__(self, key: Hashable, value: Any) -> None:
-        index = abs(hash(key)) % self.__size
+        index = self.__get_index(key)
 
         for entrie_indx in self.__indexes[index]:
             if entrie_indx == -1:
@@ -77,7 +80,7 @@ class MyDict:
         self.__check_size()
         
     def __getitem__(self, key: Hashable) -> Any:
-        index = abs(hash(key)) % self.__size
+        index = self.__get_index(key)
         
         for entrie_indx in self.__indexes[index]:
             if entrie_indx == -1:
@@ -88,7 +91,7 @@ class MyDict:
         raise KeyError("Ключ не найден")
     
     def __delitem__(self, key: Hashable) -> None:
-        index = abs(hash(key)) % self.__size
+        index = self.__get_index(key)
         entitie_indexes = self.__indexes[index]
         
         for indx in entitie_indexes:
@@ -104,7 +107,7 @@ class MyDict:
         raise KeyError("Ключ не найден")
     
     def __contains__(self, key: Hashable) -> bool:
-        index = abs(hash(key)) % self.__size
+        index = self.__get_index(key)
 
         for entrie_indx in self.__indexes[index]:
             if entrie_indx == -1:
