@@ -1,177 +1,156 @@
-from typing import Any, Optional, Iterator
+from typing import Any, Hashable, Iterator, Optional
 
 
-class DoubleLinkedListIteraot:
-    def __init__(self, first_node) -> None:
-        self.current = first_node
+class MyDictIterator:
+    def __init__(self, data) -> None:
+        self.data = data
+        self._counter = 0
     
     def __iter__(self) -> Iterator:
         return self
     
     def __next__(self):
-        if not self.current:
+        if self._counter >= len(self.data):
             raise StopIteration
         
-        value = self.current
-        self.current = self.current.next
-        return value
+        self._counter += 1
+        return self.data[self._counter - 1]
+        
 
-
-class DoubleLinkedList:
-    """Двусвязный список"""
-    class Node:
-        """Элемент списка"""
-        def __init__(self, value: Any) -> None:
+class MyDict:
+    class Entrie:
+        def __init__(self, key: Hashable, value: Any) -> None:
+            self.key = key
             self.value = value
-            self.prev = None
-            self.next = None
-
-    def __init__(self) -> None:
-        self._head = None
-        self._size = 0
-
-    def _create_node(self, value: Any) -> Node:
-        return self.Node(value)
-
-    def _get_first_or_last_node(self, is_first: bool = True) -> Optional[Node]:
-        """Получение первого или последнего элемента"""
-        attr_name = "prev" if is_first else "next"
-
-        if self._head:
-            current = self._head
-            while getattr(current, attr_name, None):
-                current = getattr(current, attr_name)
-            return current
-        return
-
-    def _get_first_node(self) -> Optional[Node]:
-        """Получение первого элемента"""
-        return self._get_first_or_last_node(is_first=True)
+        
+        def __str__(self) -> str:
+            key = f"{self.key}" if isinstance(self.key, (int, float)) else f"'{self.key}'"
+            return f"{key}: {self.value}"
     
-    def _get_last_node(self) -> Optional[Node]:
-        """Получение последнего элемента"""
-        return self._get_first_or_last_node(is_first=False)
+    def __init__(self):
+        self.__data = []
+        self.__size = 8
+        self.__indexes = [[-1] for _ in range(self.__size)]
+        self.__load_factor = 0.0
 
-    def append(self, value: Any) -> None:
-        """Добавление элемента в конец списка"""
-        node = self._create_node(value)
-        if self._size == 0:
-            self._head = node
-            self._size += 1
-            return
+    def __set_load_factor(self) -> None:
+        self.__load_factor = len(self.__data) / self.__size
+
+    def __check_size(self) -> None:
+        self.__set_load_factor()
+        if self.__load_factor >= 0.75:
+            self.__size *= 2
+        elif self.__size > 8:
+            self.__size //= 2
+        self.__resize()
+
+    def __resize(self) -> None:
+        self.__set_load_factor()
+        self.__indexes = [[-1] for _ in range(self.__size)]
+
+        for data_indx in range(len(self.__data)):
+            index = abs(hash(self.__data[data_indx].key)) % self.__size
+            if self.__indexes[index][0] == -1:
+                self.__indexes[index] = [data_indx]
+            else:
+                self.__indexes[index].append(data_indx)
         
-        last_node = self._get_last_node()
-        node.prev = last_node
-        last_node.next = node
-        self._size += 1
+    def _create_entrie(self, key: Hashable, value: Any) -> Entrie:
+        return self.Entrie(key, value)
     
-    def prepend(self, value: Any) -> None:
-        """Добавление элемента в начало списка"""
-        node = self._create_node(value)
-        if self._size == 0:
-            self._head = node
-            self._size += 1
-            return
-        
-        first_node = self._get_first_node()
-        node.next = first_node
-        first_node.prev = node
-        self._size += 1
-    
-    def insert(self, index: int, value: Any) -> None:
-        """Добавление элемента по индексу"""
-        node = self._create_node(value)
-        if self._size == 0:
-            self._head = node
-            self._size += 1
-            return
-        
-        if index < 0:
-            index += len(self) + 1
+    def __setitem__(self, key: Hashable, value: Any) -> None:
+        index = abs(hash(key)) % self.__size
 
-        counter = 0
-        prev_ = None
-        current = self._get_first_node()
-
-        while counter < index and current:
-            counter += 1
-            prev_ = current
-            current = current.next
-        
-        if not prev_:
-            node.next = current
-            current.prev = node
-        elif prev_ and current:
-            node.prev = prev_
-            node.next = current
-            prev_.next = node
-            current.prev = node
-        else:
-            node.prev = prev_
-            prev_.next = node
-        self._size += 1
-        
-    def delete(self, value: Any) -> None:
-        """Удаление элемента по значению"""
-        if self._size == 0:
-            return
-        
-        current = self._get_first_node()
-        while current:
-            if current.value != value:
-                current = current.next
-                continue
-            
-            if not current.next and not current.prev:
-                self._head = None
+        for entrie_indx in self.__indexes[index]:
+            if entrie_indx == -1:
                 break
-
-            if current.prev:
-                current.prev.next = current.next
-            if current.next:
-                current.next.prev = current.prev
-            
-            break
-        self._size -= 1
-    
-    def find(self, value: Any) -> int:
-        """
-        Поиск элемента по значению. Возвращает индекс
-        """
-        if self._size == 0:
-            return -1
+            if self.__data[entrie_indx].key == key:
+                self.__data[entrie_indx].value = value
+                return
         
-        index = 0
-        current = self._get_first_node()
+        new_entrie = self._create_entrie(key, value)
+        if self.__indexes[index][0] == -1:
+            self.__indexes[index] = [len(self.__data)]
+        else:
+            self.__indexes[index].append(len(self.__data))
+        self.__data.append(new_entrie)
+        self.__check_size()
+        
+    def __getitem__(self, key: Hashable) -> Any:
+        index = abs(hash(key)) % self.__size
+        
+        for entrie_indx in self.__indexes[index]:
+            if entrie_indx == -1:
+                break
+            if self.__data[entrie_indx].key == key:
+                return self.__data[entrie_indx].value
+        
+        raise KeyError("Ключ не найден")
+    
+    def __delitem__(self, key: Hashable) -> None:
+        index = abs(hash(key)) % self.__size
+        entitie_indexes = self.__indexes[index]
+        
+        for indx in entitie_indexes:
+            if indx == -1:
+                break
+            if self.__data[indx].key == key:
+                del self.__data[indx]
+                del indx
+                if len(entitie_indexes) < 1:
+                    entitie_indexes.append(-1)
+                self.__check_size()
+                return
+        raise KeyError("Ключ не найден")
+    
+    def __contains__(self, key: Hashable) -> bool:
+        index = abs(hash(key)) % self.__size
 
-        while current:
-            if current.value != value:
-                index += 1
-                current = current.next
-                continue
-
-            return index
-        return -1
+        for entrie_indx in self.__indexes[index]:
+            if entrie_indx == -1:
+                break
+            if self.__data[entrie_indx].key == key:
+                return True
+        return False
     
     def __len__(self) -> int:
-        """Возвращает длину списка"""
-        return self._size
+        return len(self.__data)
+    
+    def __str__(self) -> str:
+        data = [str(val) for val in self.__data]
+        return "{" + ", ".join(data) + "}"
     
     def __iter__(self) -> Iterator:
-        """Возвращает итератор"""
-        return DoubleLinkedListIteraot(self._get_first_node())
-
+        return MyDictIterator([entrie.key for entrie in self.__data])
+    
+    def get(self, key: Hashable, default: Any = None) -> Optional[Any]:
+        try:
+            val = self.__getitem__(key)
+            return val
+        except KeyError:
+            return default
+    
+    def keys(self) -> Iterator:
+        return self.__iter__()
+    
+    def values(self) -> Iterator:
+        return MyDictIterator([entrie.value for entrie in self.__data])
+    
+    def items(self) -> Iterator:
+        return MyDictIterator([(entrie.key, entrie.value) for entrie in self.__data])
 
 
 if __name__ == "__main__":
-    double_ll = DoubleLinkedList()
-    double_ll.append(10)
-    double_ll.append(20)
-    double_ll.prepend(0)
-    double_ll.insert(-3, -10)
-    double_ll.delete(10)
-    print("index:", double_ll.find(-10))
-    print("len:", len(double_ll))
+    my_dict = MyDict()
+    my_dict["1"] = 1
+    my_dict["2"] = 2
+    my_dict["3"] = 3
+    my_dict["6"] = 6
+    my_dict["6"] = 16
+    my_dict["7"] = 7
+    del my_dict["7"]
 
-    for node in double_ll:
-        print(node.value)
+    print(my_dict)
+
+    for key in my_dict.items():
+        print(key)
