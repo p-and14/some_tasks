@@ -1,33 +1,61 @@
-from game import Game
+from enum import Enum
+import re
 
 import text
+from game import Game
 
 
-class Command:
-    def __init__(self, game: Game):
-        self._game = game
+pattern = re.compile(r'^\s*(\w+)(?:\s+(\d+))?(?:\s+(\d+))?\s*$')
 
-    def open(self, x: int, y: int) -> None:
-        """Открыть ячейку"""
-        self._game.open_box(x, y)
+
+class Command(Enum):
+    OPEN = "open"
+    FLAG = "flag"
+    SHOW = "show"
+    EXIT = "exit"
+        
+    def execute(
+        self,
+        game: Game,
+        x: int | None = None,
+        y: int | None = None
+    ) -> None:
+        if (
+            x is not None
+            and y is not None
+            and not game.coords_is_valid(x, y)
+        ):
+            raise ValueError(text.must_be_within_a_field)
+        
+        if self == Command.OPEN:
+            if not game.mines_puted:
+                game.put_mines(x, y)
+            game.open_box(x, y)
+        elif self == Command.FLAG:
+            game.flag(x, y)
+        elif self == Command.SHOW:
+            game.print_map()
+        elif self == Command.EXIT:
+            game.close()
     
-    def flag(self, x: int, y: int) -> None:
-        """Установить/убрать флаг"""
-        self._game.flag(x, y)
+    @staticmethod
+    def from_input(user_input: str) -> tuple['Command', int | None, int | None]:
+        match = pattern.match(user_input)
+        if not match:
+            raise ValueError(text.incorrect_command)
 
-    def show(self) -> None:
-        """Показать поле"""
-        self._game.print_map()
-    
-    def exit(self) -> None:
-        """Закончить игру"""
-        self._game.close()
+        command, x, y = match.groups()
+
+        if x is not None and y is not None:
+            x, y = int(x), int(y)
+
+        for com in Command:
+            if com.value == command:
+                return com, x, y
+        raise ValueError(text.incorrect_command)
 
 
 def main():
-    game = Game()
-    command = Command(game)
-
     # Map parameters
     while True:
         try:
@@ -48,57 +76,32 @@ def main():
         except ValueError:
             print(text.invalid_format)
 
+    game = Game()
     game.create_map(width, height)
-    command.show()
+    game.set_mines_count(mines_count)
     print(text.commands)
 
     # Commands
     while True:
-        user_input = input(text.enter).strip().lower().split()
-
-        if not hasattr(command, user_input[0]):
-            print(text.unknown_command)
-            continue
-
-        if len(user_input) > 2:
-            if not user_input[1].isdigit() or not user_input[2].isdigit():
-                print(text.must_be_integer)
-                continue
-            
-            x, y = int(user_input[1]), int(user_input[2])
-            if x < 0 or x > width - 1 or y < 0 or y > height - 1:
-                print(text.must_be_within_a_field)
-                continue
-
-            if user_input[0] == "open":
-                if not game.mines_puted:
-                    mines_puted = game.put_mines(mines_count, x, y)
-                    if not mines_puted:
-                        print(text.problem_with_mines)
-                        break
-                command.open(x, y)
-                
-            elif user_input[0] == "flag":
-                game.flag(x, y)
-        elif len(user_input) == 1:
-            if user_input[0] == "show":
-                command.show()
-            elif user_input[0] == "exit":
-                command.exit()
-        else:
-            print(text.invalid_format)
-
-        if game.status == game.loss:
-            print(text.loss)
-            command.show()
-            break
-        elif game.status == game.win:
-            print(text.win)
-            command.show()
-            break
-        elif game.status == game.closed:
-            print(text.exit)
-            break
+        try:
+            user_input = input(text.enter).strip().lower()
+            command, x, y = Command.from_input(user_input)
+            command.execute(game, x, y)
+        except ValueError as e:
+            print(e)
+        
+        match game.status:
+            case game.loss:
+                print(text.loss)
+                Command.SHOW.execute(game)
+                break
+            case game.win:
+                print(text.win)
+                Command.SHOW.execute(game)
+                break
+            case game.closed:
+                print(text.exit)
+                break
 
 
 if __name__ == "__main__":
@@ -106,4 +109,3 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         pass
-    

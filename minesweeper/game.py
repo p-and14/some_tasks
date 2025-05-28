@@ -1,8 +1,7 @@
 import random
 from typing import Optional
 
-
-class Box:
+class Сell:
     """Ячейка"""
     closed: str = "■"
     opened: str = " "
@@ -36,19 +35,19 @@ class Box:
         return f"{self.status}"
 
 
-class Map:
+class GameMap:
     def __init__(self) -> None:
         self.width = 0
         self.height = 0
         self._opened_box_count = 0
         self.mines_count = 0
-        self.map = {}
+        self.game_map = {}
     
-    def _get_box_by_coords(self, x: int, y: int) -> Box:
+    def _get_box_by_coords(self, x: int, y: int) -> Сell:
         """Получение ячейки по координатам"""
-        return self.map[y][x]
+        return self.game_map[y][x]
     
-    def _coords_is_valid(self, x: int, y: int) -> bool:
+    def coords_is_valid(self, x: int, y: int) -> bool:
         """Проверить валидность координат"""
         return not any((x < 0, y < 0, x > self.width - 1, y > self.height - 1))
     
@@ -56,11 +55,11 @@ class Map:
         """Получение количества закрытых ячеек"""
         return self.width * self.height - self._opened_box_count
     
-    def create_map(self, width: int, height: int) -> dict[int, Box]:
+    def create_map(self, width: int, height: int) -> dict[int, Сell]:
         """Сгенерировать карту"""
         self.width, self.height = width, height
-        self.map = {k: [Box() for _ in range(width)] for k in range(height - 1, -1, -1)}
-        return self.map
+        self.game_map = {k: [Сell() for _ in range(width)] for k in range(height - 1, -1, -1)}
+        return self.game_map
 
     def _set_mines_count_around_mine(self, x: int, y: int) -> None:
         """Установить количество мин соседним ячейкам
@@ -69,12 +68,12 @@ class Map:
         :param y: Координата мины по оси Y"""
         for coord_1 in range(x - 1, x + 2):
             for coord_2 in range(y - 1, y + 2):
-                if not self._coords_is_valid(coord_1, coord_2):
+                if not self.coords_is_valid(coord_1, coord_2):
                     continue
                 box = self._get_box_by_coords(coord_1, coord_2)
                 box.around_mine_count += 1
 
-    def put_mines(self, count: int, x: int, y: int) -> bool:
+    def put_mines(self, x: int, y: int) -> bool:
         """Поместить мины на карту в случайном месте 
         в зависимости от первой открытой ячейки
         
@@ -82,13 +81,12 @@ class Map:
         :param x: Координата первой открытой ячейки по оси X
         :param y: Координата первой открытой ячейки по оси Y
         """
-        self.mines_count = count
-        if (self.width * self.height - 9) < count:
+        if (self.width * self.height - 9) < self.mines_count:
             return False
 
         mine_indexes = []
 
-        while len(mine_indexes) < count:
+        while len(mine_indexes) < self.mines_count:
             coords = (random.randint(0, self.width - 1), random.randint(0, self.height - 1))
 
             if (
@@ -105,10 +103,10 @@ class Map:
             self._set_mines_count_around_mine(coord_1, coord_2)
         return True
     
-    def open_box(self, x: int, y: int) -> Optional[Box]:
+    def open_box(self, x: int, y: int) -> Optional[Сell]:
         """Открыть ячейку. 
         Если вокруг нет мин — автоматически открываются соседние ячейки"""
-        if not self._coords_is_valid(x, y):
+        if not self.coords_is_valid(x, y):
             return
         
         box = self._get_box_by_coords(x, y)
@@ -131,7 +129,7 @@ class Map:
 
     def flag(self, x: int, y: int) -> None:
         """Установить/убрать флаг"""
-        if not self._coords_is_valid(x, y):
+        if not self.coords_is_valid(x, y):
             return
         
         box = self._get_box_by_coords(x, y)
@@ -141,7 +139,7 @@ class Map:
     def __str__(self):
         map_str = {
             k: [val.status for val in v] 
-            for k, v in self.map.items()
+            for k, v in self.game_map.items()
         }
         return f"{map_str}"
 
@@ -152,7 +150,7 @@ class Game:
     loss: int = -1
 
     def __init__(self) -> None:
-        self._map = Map()
+        self._game_map = GameMap()
         self.status = None
         self.mines_puted = False
     
@@ -162,36 +160,43 @@ class Game:
 
     def create_map(self, width: int, height: int) -> None:
         """Сгенерировать карту"""
-        self._map.create_map(width, height)
+        self._game_map.create_map(width, height)
 
-    def put_mines(self, count: int, x: int, y: int) -> bool:
+    def coords_is_valid(self, x: int, y: int) -> bool:
+        """Проверить валидность координат"""
+        return self._game_map.coords_is_valid(x, y)
+    
+    def set_mines_count(self, count: int) -> None:
+        self._game_map.mines_count = count
+
+    def put_mines(self, x: int, y: int) -> bool:
         """Поместить мины на карту"""
-        self.mines_puted = self._map.put_mines(count, x, y)
+        self.mines_puted = self._game_map.put_mines(x, y)
         return self.mines_puted
     
     def print_map(self) -> None:
         """Вывести карту в консоль"""
         column_width = 5
 
-        if self._map.mines_count > 0:
-            print(f"\nКоличество мин: {self._map.mines_count}\n")
+        if self._game_map.mines_count > 0:
+            print(f"\nКоличество мин: {self._game_map.mines_count}\n")
 
-        for row, index in zip(self._map.map, range(self._map.height, 0, -1)):
-            print("".rjust(column_width), "-----+" * (self._map.width), sep="")
+        for row, index in zip(self._game_map.game_map, range(self._game_map.height, 0, -1)):
+            print("".rjust(column_width), "-----+" * (self._game_map.width), sep="")
             print(f"{index - 1} ".rjust(column_width), "|", sep="", end="")
             print(*[
                 (f"{(box.around_mine_count 
                      if box.status == box.opened and box.around_mine_count > 0
                      else box.status)} |".rjust(column_width))
-                for box in self._map.map[row]])
+                for box in self._game_map.game_map[row]])
             
-        print("".rjust(column_width), "-----+" * (self._map.width), sep="")
+        print("".rjust(column_width), "-----+" * (self._game_map.width), sep="")
         print("".rjust(column_width), end="")
-        print(*[f"{index - 1} ".rjust(column_width) for index in range(1, self._map.width + 1)], "\n")
+        print(*[f"{index - 1} ".rjust(column_width) for index in range(1, self._game_map.width + 1)], "\n")
 
     def open_box(self, x: int, y: int) -> None:
         """Открыть ячейку"""
-        box = self._map.open_box(x, y)
+        box = self._game_map.open_box(x, y)
         if not box:
             return
 
@@ -199,10 +204,10 @@ class Game:
             self.status = self.loss
             return
         
-        count_box_to_win = self._map.get_closed_box_count() - self._map.mines_count
+        count_box_to_win = self._game_map.get_closed_box_count() - self._game_map.mines_count
         if count_box_to_win == 0:
             self.status = self.win
     
     def flag(self, x: int, y: int) -> None:
         """Установить/убрать флаг"""
-        self._map.flag(x, y)
+        self._game_map.flag(x, y)
