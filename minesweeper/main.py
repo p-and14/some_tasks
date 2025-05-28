@@ -30,7 +30,7 @@ class Command(Enum):
         if self == Command.OPEN:
             if not game.mines_puted:
                 game.put_mines(x, y)
-            game.open_box(x, y)
+            game.open_cell(x, y)
         elif self == Command.FLAG:
             game.flag(x, y)
         elif self == Command.SHOW:

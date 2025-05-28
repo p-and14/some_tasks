@@ -39,11 +39,11 @@ class GameMap:
     def __init__(self) -> None:
         self.width = 0
         self.height = 0
-        self._opened_box_count = 0
+        self._opened_cell_count = 0
         self.mines_count = 0
         self.game_map = {}
     
-    def _get_box_by_coords(self, x: int, y: int) -> Сell:
+    def _get_cell_by_coords(self, x: int, y: int) -> Сell:
         """Получение ячейки по координатам"""
         return self.game_map[y][x]
     
@@ -51,9 +51,9 @@ class GameMap:
         """Проверить валидность координат"""
         return not any((x < 0, y < 0, x > self.width - 1, y > self.height - 1))
     
-    def get_closed_box_count(self) -> int:
+    def get_closed_cell_count(self) -> int:
         """Получение количества закрытых ячеек"""
-        return self.width * self.height - self._opened_box_count
+        return self.width * self.height - self._opened_cell_count
     
     def create_map(self, width: int, height: int) -> dict[int, Сell]:
         """Сгенерировать карту"""
@@ -70,8 +70,8 @@ class GameMap:
             for coord_2 in range(y - 1, y + 2):
                 if not self.coords_is_valid(coord_1, coord_2):
                     continue
-                box = self._get_box_by_coords(coord_1, coord_2)
-                box.around_mine_count += 1
+                cell = self._get_cell_by_coords(coord_1, coord_2)
+                cell.around_mine_count += 1
 
     def put_mines(self, x: int, y: int) -> bool:
         """Поместить мины на карту в случайном месте 
@@ -98,43 +98,43 @@ class GameMap:
             mine_indexes.append(coords)
 
         for coord_1, coord_2 in mine_indexes:
-            box = self._get_box_by_coords(coord_1, coord_2)
-            box.put_mine()
+            cell = self._get_cell_by_coords(coord_1, coord_2)
+            cell.put_mine()
             self._set_mines_count_around_mine(coord_1, coord_2)
         return True
     
-    def open_box(self, x: int, y: int) -> Optional[Сell]:
+    def open_cell(self, x: int, y: int) -> Optional[Сell]:
         """Открыть ячейку. 
         Если вокруг нет мин — автоматически открываются соседние ячейки"""
         if not self.coords_is_valid(x, y):
             return
         
-        box = self._get_box_by_coords(x, y)
-        if box.mined:
-            box.open()
-            return box
-        elif box.status == box.opened:
-            return box
+        cell = self._get_cell_by_coords(x, y)
+        if cell.mined:
+            cell.open()
+            return cell
+        elif cell.status == cell.opened:
+            return cell
         
-        box.open()
-        self._opened_box_count += 1
+        cell.open()
+        self._opened_cell_count += 1
         
-        if box.around_mine_count > 0:
-            return box
+        if cell.around_mine_count > 0:
+            return cell
         
         for coord_1 in range(x - 1, x + 2):
             for coord_2 in range(y - 1, y + 2):
-                self.open_box(coord_1, coord_2)
-        return box
+                self.open_cell(coord_1, coord_2)
+        return cell
 
     def flag(self, x: int, y: int) -> None:
         """Установить/убрать флаг"""
         if not self.coords_is_valid(x, y):
             return
         
-        box = self._get_box_by_coords(x, y)
-        if box.closed:
-            box.flag()
+        cell = self._get_cell_by_coords(x, y)
+        if cell.closed:
+            cell.flag()
 
     def __str__(self):
         map_str = {
@@ -185,27 +185,27 @@ class Game:
             print("".rjust(column_width), "-----+" * (self._game_map.width), sep="")
             print(f"{index - 1} ".rjust(column_width), "|", sep="", end="")
             print(*[
-                (f"{(box.around_mine_count 
-                     if box.status == box.opened and box.around_mine_count > 0
-                     else box.status)} |".rjust(column_width))
-                for box in self._game_map.game_map[row]])
+                (f"{(cell.around_mine_count 
+                     if cell.status == cell.opened and cell.around_mine_count > 0
+                     else cell.status)} |".rjust(column_width))
+                for cell in self._game_map.game_map[row]])
             
         print("".rjust(column_width), "-----+" * (self._game_map.width), sep="")
         print("".rjust(column_width), end="")
         print(*[f"{index - 1} ".rjust(column_width) for index in range(1, self._game_map.width + 1)], "\n")
 
-    def open_box(self, x: int, y: int) -> None:
+    def open_cell(self, x: int, y: int) -> None:
         """Открыть ячейку"""
-        box = self._game_map.open_box(x, y)
-        if not box:
+        cell = self._game_map.open_cell(x, y)
+        if not cell:
             return
 
-        if box.mined:
+        if cell.mined:
             self.status = self.loss
             return
         
-        count_box_to_win = self._game_map.get_closed_box_count() - self._game_map.mines_count
-        if count_box_to_win == 0:
+        count_cell_to_win = self._game_map.get_closed_cell_count() - self._game_map.mines_count
+        if count_cell_to_win == 0:
             self.status = self.win
     
     def flag(self, x: int, y: int) -> None:
